@@ -1,0 +1,48 @@
+{
+  "name": "my-planner",
+  "version": "1.0.0",
+  "description": "个人知识管理与计划系统",
+  "main": "src/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
+    "dev:renderer": "vite",
+    "dev:main": "cross-env NODE_ENV=development electron .",
+    "build": "npm run build:renderer && npm run build:main",
+    "build:renderer": "vite build",
+    "build:main": "electron-builder",
+    "pack": "electron-builder --dir",
+    "rebuild": "electron-rebuild",
+    "postinstall": "electron-rebuild"
+  },
+  "build": {
+    "appId": "com.example.my-knowledge-planner",
+    "productName": "知识计划",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "extraMetadata": {
+      "main": "src/main/main.js"
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.0.0",
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3",
+    "electron": "^22.0.0",
+    "electron-builder": "^24.0.0",
+    "electron-rebuild": "^3.2.9",
+    "vite": "^4.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "element-plus": "^2.11.2",
+    "sqlite3": "^5.1.7",
+    "vue": "^3.2.45",
+    "vue-router": "^4.5.1"
+  }
+}
