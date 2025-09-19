@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const initDatabase = require('../db/schema'); // 添加这行
+const { setupDatabaseAPI } = require('./api');
+const initDatabase = require('../db/schema');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -31,12 +32,17 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
+
+  return mainWindow;
 }
 
-// 在应用准备就绪时初始化数据库
+// 在应用准备就绪时初始化数据库和API
 app.whenReady().then(() => {
   // 初始化数据库
   initDatabase();
+  
+  // 设置数据库API
+  setupDatabaseAPI();
   
   // 创建窗口
   createWindow();

@@ -52,7 +52,23 @@ export default {
       this.activeNav = navId
       // 后续可以添加路由跳转逻辑
       console.log('导航到:', navId)
+    },
+navigateTo(navId) {
+    this.activeNav = navId
+    
+    // 根据导航ID跳转到不同页面
+    switch (navId) {
+      case 'dashboard':
+        this.$router.push('/')
+        break
+      case 'notes':
+        this.$router.push('/notes')
+        break
+      // 其他导航项的路由可以后续添加
+      default:
+        console.log('导航到:', navId)
     }
+  }
   }
 }
 </script>

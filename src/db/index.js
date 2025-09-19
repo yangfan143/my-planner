@@ -1,66 +1,34 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const { app } = require('electron');
 
-class DB {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../../data.db');
-    this.db = null;
-  }
+// 数据库文件路径
+const dbPath = path.join(app.getPath('userData'), 'planner.db');
 
-  connect() {
+let dbInstance = null;
+
+function getDatabase() {
+  if (!dbInstance) {
     try {
-      this.db = new Database(this.dbPath);
-      this.db.pragma('journal_mode = WAL'); // 提高性能
-      console.log('Connected to SQLite database with better-sqlite3');
-      return this.db;
+      dbInstance = new Database(dbPath);
+      console.log('数据库连接成功');
     } catch (error) {
-      console.error('Error connecting to database:', error);
+      console.error('数据库连接失败:', error);
       throw error;
     }
   }
+  return dbInstance;
+}
 
-  disconnect() {
-    if (this.db) {
-      this.db.close();
-      console.log('Disconnected from SQLite database');
-    }
-  }
-
-  // 执行 SQL 语句（INSERT, UPDATE, DELETE）
-  run(sql, params = []) {
-    try {
-      const stmt = this.db.prepare(sql);
-      const result = stmt.run(params);
-      return result;
-    } catch (error) {
-      console.error('Error running SQL:', error);
-      throw error;
-    }
-  }
-
-  // 获取单条记录
-  get(sql, params = []) {
-    try {
-      const stmt = this.db.prepare(sql);
-      return stmt.get(params);
-    } catch (error) {
-      console.error('Error getting data:', error);
-      throw error;
-    }
-  }
-
-  // 获取所有记录
-  all(sql, params = []) {
-    try {
-      const stmt = this.db.prepare(sql);
-      return stmt.all(params);
-    } catch (error) {
-      console.error('Error getting all data:', error);
-      throw error;
-    }
+function closeDatabase() {
+  if (dbInstance) {
+    dbInstance.close();
+    dbInstance = null;
+    console.log('数据库连接已关闭');
   }
 }
 
-// 创建单例实例
-const dbInstance = new DB();
-module.exports = dbInstance;
+module.exports = {
+  getDatabase,
+  closeDatabase
+};
