@@ -18,5 +18,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('create-note', notebookId, title, content, tags),
   updateNote: (id, updates) => ipcRenderer.invoke('update-note', id, updates),
   deleteNote: (id) => ipcRenderer.invoke('delete-note', id),
-  searchNotes: (query) => ipcRenderer.invoke('search-notes', query)
+  searchNotes: (query) => ipcRenderer.invoke('search-notes', query),
+  
+  // 任务相关API
+  getAllTasks: () => ipcRenderer.invoke('get-all-tasks'),
+  getTask: (id) => ipcRenderer.invoke('get-task', id),
+  createTask: (task) => ipcRenderer.invoke('create-task', task),
+  updateTask: (id, updates) => ipcRenderer.invoke('update-task', id, updates),
+  deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
+  
+  // 子任务相关API
+  getSubtasksByTaskId: (taskId) => ipcRenderer.invoke('get-subtasks-by-task-id', taskId),
+  createSubtask: (subtask) => ipcRenderer.invoke('create-subtask', subtask),
+  updateSubtask: (id, updates) => ipcRenderer.invoke('update-subtask', id, updates),
+  deleteSubtask: (id) => ipcRenderer.invoke('delete-subtask', id)
 });

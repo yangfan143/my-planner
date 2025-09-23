@@ -1,6 +1,5 @@
 <template>
   <div class="app-layout">
-    <TopBar />
     <div class="main-container">
       <Sidebar />
       <div class="content-area">
@@ -12,13 +11,11 @@
 
 <script>
 import Sidebar from './Sidebar.vue'
-import TopBar from './TopBar.vue'
 
 export default {
   name: 'AppLayout',
   components: {
-    Sidebar,
-    TopBar
+    Sidebar
   }
 }
 </script>

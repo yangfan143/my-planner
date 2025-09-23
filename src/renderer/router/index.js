@@ -1,22 +1,26 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Dashboard from '../views/Dashboard.vue'
 import Notes from '../views/Notes.vue'
+import Tasks from '../views/Tasks.vue'
 import Layout from '../components/Layout.vue'
 
 const routes = [
-  {
-    path: '/',
+  { path: '/',
     component: Layout,
     children: [
       {
         path: '',
-        name: 'Dashboard',
-        component: Dashboard
+        redirect: '/notes'
       },
       {
         path: '/notes',
         name: 'Notes',
         component: Notes
+      },
+      {
+        path: '/tasks',
+        name: 'Tasks',
+        component: Tasks
       }
     ]
   }

@@ -5,6 +5,19 @@
       <div class="app-name" v-if="!isCollapsed">KnowPlan</div>
     </div>
     
+    <!-- 搜索框 -->
+    <div class="search-container" v-if="!isCollapsed">
+      <div class="search-box">
+        <div class="search-icon">🔍</div>
+        <input 
+          type="text" 
+          placeholder="搜索笔记、任务..." 
+          v-model="searchQuery"
+          @keyup.enter="performSearch"
+        >
+      </div>
+    </div>
+    
     <div class="nav-menu">
       <div 
         v-for="item in navItems" 
@@ -33,9 +46,9 @@ export default {
   data() {
     return {
       isCollapsed: false,
-      activeNav: 'dashboard',
+      activeNav: 'notes',
+      searchQuery: '',
       navItems: [
-        { id: 'dashboard', name: '首页', icon: '📊' },
         { id: 'notes', name: '笔记', icon: '📝' },
         { id: 'tasks', name: '任务', icon: '✅' },
         { id: 'calendar', name: '日历', icon: '📅' },
@@ -50,25 +63,27 @@ export default {
     },
     navigateTo(navId) {
       this.activeNav = navId
-      // 后续可以添加路由跳转逻辑
-      console.log('导航到:', navId)
+      
+      // 根据导航ID跳转到不同页面
+      switch (navId) {
+        case 'dashboard':
+          this.$router.push('/')
+          break
+        case 'notes':
+          this.$router.push('/notes')
+          break
+        case 'tasks':
+          this.$router.push('/tasks')
+          break
+        // 其他导航项的路由可以后续添加
+        default:
+          console.log('导航到:', navId)
+      }
     },
-navigateTo(navId) {
-    this.activeNav = navId
-    
-    // 根据导航ID跳转到不同页面
-    switch (navId) {
-      case 'dashboard':
-        this.$router.push('/')
-        break
-      case 'notes':
-        this.$router.push('/notes')
-        break
-      // 其他导航项的路由可以后续添加
-      default:
-        console.log('导航到:', navId)
+    performSearch() {
+      console.log('执行搜索:', this.searchQuery)
+      // 后续实现搜索功能
     }
-  }
   }
 }
 </script>
@@ -109,6 +124,34 @@ navigateTo(navId) {
 
 .sidebar.collapsed .app-name {
   display: none;
+}
+
+/* 搜索框样式 */
+.search-container {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  margin-left: 8px;
+  flex: 1;
+  outline: none;
+  color: white;
+  font-size: 14px;
+}
+
+.search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .nav-menu {

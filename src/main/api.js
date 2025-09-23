@@ -3,8 +3,6 @@ const { getDatabase } = require('../db');
 const PlannerDatabase = require('../db/database'); 
 const db = new PlannerDatabase(); // 修复后的代码
 function setupDatabaseAPI() {
-
-
   // 笔记本相关API
   ipcMain.handle('get-all-notebooks', async () => {
     try {
@@ -106,6 +104,91 @@ function setupDatabaseAPI() {
       return db.searchNotes(query);
     } catch (error) {
       console.error('搜索笔记失败:', error);
+      throw error;
+    }
+  });
+  
+  // 任务相关API
+  ipcMain.handle('get-all-tasks', async () => {
+    try {
+      return db.getAllTasks();
+    } catch (error) {
+      console.error('获取任务列表失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('get-task', async (event, id) => {
+    try {
+      return db.getTaskById(id);
+    } catch (error) {
+      console.error('获取任务失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('create-task', async (event, task) => {
+    try {
+      return db.createTask(task);
+    } catch (error) {
+      console.error('创建任务失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('update-task', async (event, id, updates) => {
+    try {
+      return db.updateTask(id, updates);
+    } catch (error) {
+      console.error('更新任务失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('delete-task', async (event, id) => {
+    try {
+      return db.deleteTask(id);
+    } catch (error) {
+      console.error('删除任务失败:', error);
+      throw error;
+    }
+  });
+  
+  // 在任务相关API后面添加以下子任务相关的IPC处理程序
+  
+  // 子任务相关API
+  ipcMain.handle('get-subtasks-by-task-id', async (event, taskId) => {
+    try {
+      return db.getSubtasksByTaskId(taskId);
+    } catch (error) {
+      console.error('获取子任务列表失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('create-subtask', async (event, subtask) => {
+    try {
+      return db.createSubtask(subtask);
+    } catch (error) {
+      console.error('创建子任务失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('update-subtask', async (event, id, updates) => {
+    try {
+      return db.updateSubtask(id, updates);
+    } catch (error) {
+      console.error('更新子任务失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('delete-subtask', async (event, id) => {
+    try {
+      return db.deleteSubtask(id);
+    } catch (error) {
+      console.error('删除子任务失败:', error);
       throw error;
     }
   });

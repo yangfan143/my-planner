@@ -1,17 +1,19 @@
 <template>
   <div class="top-bar">
     <div class="page-title">{{ currentPageTitle }}</div>
-    <div class="search-box">
-      <div class="search-icon">🔍</div>
-      <input 
-        type="text" 
-        placeholder="搜索笔记、任务..." 
-        v-model="searchQuery"
-        @keyup.enter="performSearch"
-      >
-    </div>
-    <div class="user-profile">
-      <div class="user-avatar"></div>
+    <div class="right-controls">
+      <div class="search-box">
+        <div class="search-icon">🔍</div>
+        <input 
+          type="text" 
+          placeholder="搜索笔记、任务..." 
+          v-model="searchQuery"
+          @keyup.enter="performSearch"
+        >
+      </div>
+      <div class="user-profile">
+        <div class="user-avatar"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -23,7 +25,6 @@ export default {
     return {
       searchQuery: '',
       pageTitles: {
-        dashboard: '仪表盘',
         notes: '笔记',
         tasks: '任务',
         calendar: '日历',
@@ -34,8 +35,12 @@ export default {
   },
   computed: {
     currentPageTitle() {
-      // 这里可以根据当前路由动态设置标题
-      return this.pageTitles.dashboard // 暂时固定为仪表盘
+      // 根据当前路由动态设置标题
+      const routeName = this.$route.name
+      if (routeName && this.pageTitles[routeName.toLowerCase()]) {
+        return this.pageTitles[routeName.toLowerCase()]
+      }
+      return this.pageTitles.notes // 默认显示笔记
     }
   },
   methods: {
@@ -61,6 +66,12 @@ export default {
 .page-title {
   font-size: 20px;
   font-weight: 600;
+}
+
+.right-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .search-box {
