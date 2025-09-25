@@ -24,7 +24,7 @@
         :key="item.id" 
         class="nav-item"
         :class="{ active: activeNav === item.id }"
-        @click="navigateTo(item.id)"
+        @click="navigateTo(item.path)"
       >
         <div class="nav-icon">{{ item.icon }}</div>
         <div class="nav-text" v-if="!isCollapsed">{{ item.name }}</div>
@@ -49,11 +49,11 @@ export default {
       activeNav: 'notes',
       searchQuery: '',
       navItems: [
-        { id: 'notes', name: '笔记', icon: '📝' },
-        { id: 'tasks', name: '任务', icon: '✅' },
-        { id: 'calendar', name: '日历', icon: '📅' },
-        { id: 'mindmap', name: '思维导图', icon: '🧠' },
-        { id: 'kanban', name: '看板', icon: '📋' }
+        { id: 'plans', name: '计划', icon: '📋', path: '/plans' },
+        { id: 'notes', name: '笔记', icon: '📝', path: '/notes' },
+        { id: 'tasks', name: '任务', icon: '✓', path: '/tasks' },
+        { id: 'calendar', name: '日历', icon: '📅', path: '/calendar' },
+        { id: 'mindmap', name: '思维导图', icon: '🧠', path: '/mindmap' }
       ]
     }
   },
@@ -61,24 +61,15 @@ export default {
     toggleCollapse() {
       this.isCollapsed = !this.isCollapsed
     },
-    navigateTo(navId) {
-      this.activeNav = navId
-      
-      // 根据导航ID跳转到不同页面
-      switch (navId) {
-        case 'dashboard':
-          this.$router.push('/')
-          break
-        case 'notes':
-          this.$router.push('/notes')
-          break
-        case 'tasks':
-          this.$router.push('/tasks')
-          break
-        // 其他导航项的路由可以后续添加
-        default:
-          console.log('导航到:', navId)
+    navigateTo(path) {
+      // 设置活动导航项
+      const activeItem = this.navItems.find(item => item.path === path)
+      if (activeItem) {
+        this.activeNav = activeItem.id
       }
+      
+      // 跳转到指定路径
+      this.$router.push(path)
     },
     performSearch() {
       console.log('执行搜索:', this.searchQuery)

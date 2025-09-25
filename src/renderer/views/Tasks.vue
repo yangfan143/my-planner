@@ -2,10 +2,15 @@
   <div class="tasks-page">
     <div class="tasks-header">
       <h1>任务管理</h1>
-      <button class="create-task-btn" @click="showCreateTaskModal = true">
-        <div class="plus-icon">+</div>
-        <span>创建任务</span>
-      </button>
+      <div class="header-actions">
+        <button class="create-task-btn" @click="showCreateTaskModal = true">
+          <div class="plus-icon">+</div>
+          <span>创建任务</span>
+        </button>
+        
+        <!-- 快捷功能按钮区 -->
+
+      </div>
     </div>
 
     <div class="tasks-filters">
@@ -260,7 +265,7 @@
         </div>
         
         <div class="custom-reminder">
-          <div class="section-title">自定义时间</div>
+          
           <div class="datetime-picker-container">
             <input 
               type="datetime-local" 
@@ -291,28 +296,10 @@
   
   <!-- 时间范围按钮 -->
   <div class="quick-action-item">
-    <button class="action-btn" @click.stop="toggleTimeRangeDropdown">
-      <span class="action-icon">🕒</span>
-      <span v-if="newTask.startTime || newTask.endTime" class="action-badge">●</span>
-    </button>
-    <div v-if="showTimeRangeInput" class="action-dropdown time-range-dropdown">
-      <div class="time-range-options">
-        <div class="quick-durations">
-          <button 
-            v-for="duration in quickDurations" 
-            :key="duration.value"
-            class="quick-duration-btn"
-            @click.stop="setQuickDuration(duration.value)"
-          >
-            {{ duration.label }}
-          </button>
-        </div>
-        
-        <div class="custom-time-range">
-          <div class="section-title">自定义时间段</div>
-          <div class="time-range-inputs">
+            <div class="custom-time-range">
+                    <div class="time-range-inputs">
             <div class="time-input-group">
-              <label>开始时间</label>
+              <!-- <label>开始时间</label> -->
               <div class="datetime-picker-container">
                 <input 
                   type="datetime-local" 
@@ -320,18 +307,12 @@
                   class="datetime-input"
                   @click.stop
                 >
-                <button 
-                  class="calendar-btn"
-                  @click.stop="showCalendarPicker('startTime')"
-                  title="打开日历"
-                >
-                  📅
-                </button>
+
               </div>
             </div>
             
             <div class="time-input-group">
-              <label>结束时间</label>
+              <!-- <label>结束时间</label> -->
               <div class="datetime-picker-container">
                 <input 
                   type="datetime-local" 
@@ -339,17 +320,16 @@
                   class="datetime-input"
                   @click.stop
                 >
-                <button 
-                  class="calendar-btn"
-                  @click.stop="showCalendarPicker('endTime')"
-                  title="打开日历"
-                >
-                  📅
-                </button>
+
               </div>
             </div>
           </div>
         </div>
+    <div v-if="showTimeRangeInput" class="action-dropdown time-range-dropdown">
+      <div class="time-range-options">
+
+        
+
         
         <div v-if="newTask.startTime && newTask.endTime" class="current-duration">
           <div class="section-title">已设置时间段</div>
@@ -404,7 +384,7 @@
           </div>
           
 
-          
+
           <!-- 待办清单 -->
           <div class="form-group">
             <label>待办清单</label>
@@ -731,11 +711,11 @@ export default {
       { label: '下周此时', value: 'nextWeek' }
     ],
     quickDurations: [
-      { label: '30分钟', value: 30 },
-      { label: '1小时', value: 60 },
-      { label: '2小时', value: 120 },
-      { label: '半天', value: 720 },
-      { label: '全天', value: 1440 }
+      { label: '今天', value: 0 },
+      { label: '明天', value: 1 },
+      { label: '本周', value: 7 },
+      { label: '本月', value: 30 },
+      { label: '自定义', value: -1 }
     ],
     commonTags: ['重要', '紧急', '工作', '个人', '学习', '项目', '日常', '会议']
     };
@@ -1034,19 +1014,36 @@ export default {
       }
     },
     
+    // 收集所有任务的标签 - 确保全平台统一应用
     collectAllTags() {
-      // 收集所有任务的标签并去重
-      const tagSet = new Set();
-      this.tasks.forEach(task => {
-        if (task.tags && Array.isArray(task.tags)) {
-          task.tags.forEach(tag => {
-            if (tag && tag.trim()) {
-              tagSet.add(tag.trim());
+      try {
+        // 收集所有任务的标签并去重
+        const tagSet = new Set();
+        
+        // 先添加通用标签
+        this.commonTags.forEach(tag => tagSet.add(tag));
+        
+        // 再添加所有任务中的标签
+        this.tasks.forEach(task => {
+          if (task.tags) {
+            // 确保tags是数组
+            const taskTags = typeof task.tags === 'string' ? JSON.parse(task.tags || '[]') : task.tags || [];
+            if (Array.isArray(taskTags)) {
+              taskTags.forEach(tag => {
+                if (tag && tag.trim()) {
+                  tagSet.add(tag.trim());
+                }
+              });
             }
-          });
-        }
-      });
-      this.allTags = Array.from(tagSet);
+          }
+        });
+        
+        this.allTags = Array.from(tagSet);
+      } catch (error) {
+        console.error('收集标签失败:', error);
+        // 如果失败，至少保留通用标签
+        this.allTags = [...this.commonTags];
+      }
     },
     
     resetNewTask() {
@@ -1157,13 +1154,87 @@ export default {
     this.showReminderInput = false;
   },
   
-  setQuickDuration(minutes) {
-    const now = new Date();
-    this.newTask.startTime = now.toISOString().slice(0, 16);
+  setQuickDuration(days) {
+    if (days === -1) {
+      // 如果是自定义选项，打开自定义时间选择器
+      this.toggleTimeRangeDropdown();
+      return;
+    }
     
-    const endTime = new Date(now.getTime() + minutes * 60 * 1000);
-    this.newTask.endTime = endTime.toISOString().slice(0, 16);
+    const now = new Date();
+    let startDate, endDate;
+    
+    switch(days) {
+      case 0:
+        // 今天
+        startDate = now;
+        endDate = new Date(now);
+        break;
+      case 1:
+        // 明天
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() + 1);
+        endDate = new Date(startDate);
+        break;
+      case 7:
+        // 本周
+        const dayOfWeek = now.getDay() || 7; // 将周日视为第7天
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - dayOfWeek + 1);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        break;
+      case 30:
+        // 本月
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      default:
+        // 其他天数
+        startDate = now;
+        endDate = new Date(now);
+        endDate.setDate(now.getDate() + days);
+    }
+    
+    // 只设置日期部分，忽略时间
+    this.newTask.startTime = startDate.toISOString().split('T')[0];
+    this.newTask.endTime = endDate.toISOString().split('T')[0];
     this.showTimeRangeInput = false;
+  },
+  
+  // 检查当前是否激活了特定时间段
+  isDurationActive(days) {
+    if (!this.newTask.startTime || !this.newTask.endTime) return false;
+    
+    const startDate = new Date(this.newTask.startTime);
+    const endDate = new Date(this.newTask.endTime);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    switch(days) {
+      case 0: // 今天
+        const today = new Date(now);
+        return startDate.toDateString() === today.toDateString() && endDate.toDateString() === today.toDateString();
+      case 1: // 明天
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        return startDate.toDateString() === tomorrow.toDateString() && endDate.toDateString() === tomorrow.toDateString();
+      case 7: // 本周
+        const dayOfWeek = now.getDay() || 7;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - dayOfWeek + 1);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return startDate.toDateString() === weekStart.toDateString() && endDate.toDateString() === weekEnd.toDateString();
+      case 30: // 本月
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return startDate.toDateString() === monthStart.toDateString() && endDate.toDateString() === monthEnd.toDateString();
+      default:
+        // 检查是否是其他天数范围
+        const durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        return durationDays === days;
+    }
   },
   clearReminder() {
     this.newTask.reminder = '';
@@ -1212,6 +1283,144 @@ export default {
   padding: 20px;
   border-bottom: 1px solid #e0e0e0;
   background: white;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.quick-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 时间段选择按钮样式 */
+.quick-durations-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.quick-duration-btn {
+  padding: 8px 16px;
+  border: 2px solid #3498db;
+  background-color: white;
+  color: #3498db;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.quick-duration-btn:hover {
+  background-color: #3498db;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.quick-duration-btn.active {
+  background-color: #3498db;
+  color: white;
+  font-weight: bold;
+}
+
+.quick-duration-btn[value="-1"] {
+  border-color: #9b59b6;
+  color: #9b59b6;
+}
+
+.quick-duration-btn[value="-1"]:hover,
+.quick-duration-btn[value="-1"].active {
+  background-color: #9b59b6;
+  color: white;
+}
+
+/* 已选时间段显示 */
+.current-duration-display {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.duration-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.duration-label {
+  font-weight: bold;
+  color: #666;
+}
+
+.duration-text {
+  color: #333;
+  flex: 1;
+}
+
+.clear-duration-btn {
+  padding: 4px 12px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.clear-duration-btn:hover {
+  background-color: #c0392b;
+}
+
+.action-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f5f7f9;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: #e0e7ff;
+  transform: scale(1.05);
+}
+
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.action-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background-color: #3498db;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .create-task-btn {
@@ -1595,46 +1804,96 @@ export default {
   position: relative;
 }
 
-.action-btn {
+/* 首行按钮样式 - 无文字圆形按钮 */
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  gap: 8px;
 }
 
-.action-btn:hover {
-  background-color: #f8f9fa;
-  border-color: #3498db;
+.quick-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
-.action-icon {
-  font-size: 16px;
-}
-
-.action-text {
-  color: #333;
-}
-
-.action-badge {
+.action-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
-  background-color: #3498db;
+  width: 36px;
+  height: 36px;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-btn:hover {
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.action-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background-color: #3b82f6;
   color: white;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  border-radius: 9px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 标记设置状态的圆点 */
+.action-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  background-color: #3b82f6;
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+/* 弹窗中带文字的快捷按钮样式 */
+.modal .action-btn {
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.modal .action-btn .action-text {
   margin-left: 6px;
+  font-weight: 500;
 }
 
 /* 下拉菜单样式 */
@@ -1678,6 +1937,41 @@ export default {
   padding: 0 8px;
   color: #666;
   font-size: 14px;
+}
+
+/* 时间间隔按钮样式优化 */
+.quick-duration-btn {
+  padding: 8px 16px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  text-align: center;
+}
+
+.quick-duration-btn:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+.quick-duration-btn:active {
+  transform: translateY(0);
+}
+
+.quick-duration-btn:last-child {
+  background-color: #95a5a6;
+}
+
+.quick-duration-btn:last-child:hover {
+  background-color: #7f8c8d;
 }
 
 /* 标签相关样式 */
@@ -1850,10 +2144,96 @@ export default {
 }
 
 /* 时间范围输入框样式 */
+
 .time-range-inputs {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.time-input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-input-group label {
+  margin-bottom: 5px;
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.datetime-picker-container {
+  position: relative;
+  width: 100%;
+}
+
+.calendar-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  z-index: 1;
+}
+
+/* 确保输入框填满容器 */
+.datetime-input {
+  width: 100%;
+  padding-right: 30px; /* 为日历按钮留出空间 */
+}
+
+/* 优化快捷功能按钮区的整体布局 */
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* 修复下拉菜单样式 */
+.action-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: 12px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 250px;
+}
+
+/* 优化时间范围下拉菜单宽度 */
+.time-range-dropdown {
+  min-width: 450px;
+}
+
+/* 确保弹窗中的表单元素样式一致 */
+.form-group.inline {
+  display: inline-block;
+  margin-right: 20px;
+  margin-bottom: 20px;
+}
+
+.form-group.inline label {
+  margin-bottom: 5px;
+}
+
+.form-group.inline select {
+  min-width: 120px;
 }
 
 .time-range-inputs input {
@@ -1862,81 +2242,144 @@ export default {
 
 /* 待办清单样式 */
 .subtasks-container {
-  margin-top: 10px;
+  margin-top: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
 }
 
 .subtask-item {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 10px;
-  background-color: #f8f9fa;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: white;
   border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.subtask-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .subtask-checkbox {
   margin-right: 10px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
 }
 
 .subtask-title {
   flex: 1;
   padding: 6px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
   font-size: 13px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.subtask-title:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .subtask-title.completed {
   text-decoration: line-through;
-  color: #999;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .subtask-due-date {
-  width: 150px;
-  padding: 6px 10px;
-  margin: 0 10px;
-  border: 1px solid #ddd;
+  width: 120px;
+  padding: 6px 8px;
+  margin: 0 8px;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
   font-size: 12px;
+  background: white;
+}
+
+.subtask-due-date:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .delete-subtask-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #999;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-size: 16px;
+  color: #64748b;
   cursor: pointer;
   width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .delete-subtask-btn:hover {
-  background-color: #f5f5f5;
-  color: #e74c3c;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
 }
 
 .add-subtask-btn {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
-  background-color: #2ecc71;
+  margin-top: 8px;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .add-subtask-btn:hover {
-  background-color: #27ae60;
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-subtask-btn:active {
+  transform: translateY(0);
+}
+
+/* 任务卡片中的待办清单样式 */
+.task-card .subtasks-container {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 8px;
+}
+
+.task-card .subtask-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+}
+
+.task-card .subtask-title {
+  border: none;
+  padding: 0;
+  background: transparent;
 }
 
 /* 预览按钮样式 */
@@ -2297,7 +2740,6 @@ export default {
   cursor: pointer;
   font-size: 11px;
 }
-
 .clear-reminder-btn:hover {
   background-color: #c0392b;
 }

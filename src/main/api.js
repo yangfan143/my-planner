@@ -192,6 +192,89 @@ function setupDatabaseAPI() {
       throw error;
     }
   });
+
+  // 计划相关API
+  ipcMain.handle('get-all-plans', async () => {
+    try {
+      return db.getAllPlans();
+    } catch (error) {
+      console.error('获取计划列表失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-plan-by-id', async (event, id) => {
+    try {
+      return db.getPlanById(id);
+    } catch (error) {
+      console.error('获取计划详情失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('create-plan', async (event, planData) => {
+    try {
+      return db.createPlan(planData);
+    } catch (error) {
+      console.error('创建计划失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('update-plan', async (event, id, updates) => {
+    try {
+      return db.updatePlan(id, updates);
+    } catch (error) {
+      console.error('更新计划失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('delete-plan', async (event, id) => {
+    try {
+      return db.deletePlan(id);
+    } catch (error) {
+      console.error('删除计划失败:', error);
+      throw error;
+    }
+  });
+
+  // 计划任务相关API
+  ipcMain.handle('get-plan-tasks-by-plan-id', async (event, planId) => {
+    try {
+      return db.getPlanTasksByPlanId(planId);
+    } catch (error) {
+      console.error('获取计划任务列表失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('create-plan-task', async (event, taskData) => {
+    try {
+      return db.createPlanTask(taskData);
+    } catch (error) {
+      console.error('创建计划任务失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('update-plan-task', async (event, id, updates) => {
+    try {
+      return db.updatePlanTask(id, updates);
+    } catch (error) {
+      console.error('更新计划任务失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('delete-plan-task', async (event, id) => {
+    try {
+      return db.deletePlanTask(id);
+    } catch (error) {
+      console.error('删除计划任务失败:', error);
+      throw error;
+    }
+  });
 }
 
 module.exports = {

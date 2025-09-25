@@ -68,6 +68,35 @@ function initDatabase() {
       )
     `);
 
+    // 创建计划表
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        type_tags TEXT,
+        start_date DATETIME,
+        end_date DATETIME,
+        goal TEXT,
+        status TEXT DEFAULT 'not_started',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 创建计划任务表
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS plan_tasks (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        is_completed INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (plan_id) REFERENCES plans (id) ON DELETE CASCADE
+      )
+    `);
+
     console.log('数据库初始化成功');
   } catch (error) {
     console.error('数据库初始化失败:', error);
