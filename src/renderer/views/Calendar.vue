@@ -67,10 +67,121 @@
     </div>
 
     <!-- 空状态显示 -->
-    <div class="empty-state" v-if="isEmptyState">
-      <div class="empty-icon">📅</div>
-      <div class="empty-text">日历中暂无事件</div>
-      <button class="create-event-btn" @click="createNewEvent">创建新事件</button>
+  <div class="empty-state" v-if="isEmptyState">
+    <div class="empty-icon">📅</div>
+    <div class="empty-text">日历中暂无事件</div>
+    <button class="create-event-btn" @click="createNewEvent">创建新事件</button>
+  </div>
+  
+  <!-- 当日文件列表 -->
+  <div v-if="selectedDay" class="day-files">
+    <div class="day-files-header">
+      <h3>{{ selectedDay.getFullYear() }}年{{ selectedDay.getMonth() + 1 }}月{{ selectedDay.getDate() }}日 {{ dayFiles.length > 0 ? '创建的文件' : '暂无文件' }}</h3>
+      <div class="file-actions">
+        <button class="create-file-btn" @click="createNewEvent">
+          <span class="btn-icon">📅</span>
+          <span class="btn-text">创建日程</span>
+        </button>
+        <button class="create-file-btn secondary" @click="createNewNote">
+          <span class="btn-icon">📝</span>
+          <span class="btn-text">创建笔记</span>
+        </button>
+        <button class="create-file-btn secondary" @click="createNewPlan">
+          <span class="btn-icon">📋</span>
+          <span class="btn-text">创建计划</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="files-list" v-if="dayFiles.length > 0">
+      <div 
+        v-for="file in dayFiles" 
+        :key="file.id"
+        class="file-item"
+        :style="{ borderLeft: `3px solid ${getEventColor(file.type)}` }"
+        @click="openFile(file)"
+      >
+        <div class="file-icon">{{ getFileIcon(file.type) }}</div>
+        <div class="file-content">
+          <div class="file-title">{{ file.title }}</div>
+          <div class="file-type">{{ getFileTypeLabel(file.type) }}</div>
+        </div>
+        <div class="file-arrow">→</div>
+      </div>
+    </div>
+    
+    <div v-else class="no-files">
+      <div class="no-files-icon">📄</div>
+      <div class="no-files-text">该日期暂无创建的文件</div>
+    </div>
+  </div>
+  </div>
+
+  <!-- 事件详情/创建对话框 -->
+  <div v-if="showEventDialog" class="modal-overlay" @click.self="showEventDialog = false">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>添加日程</h2>
+        <button class="close-btn" @click="showEventDialog = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- 选中的日期显示 -->
+        <div class="form-group">
+          <label>选择日期</label>
+          <div class="selected-date">
+            {{ selectedDay.getFullYear() }}年{{ selectedDay.getMonth() + 1 }}月{{ selectedDay.getDate() }}日
+          </div>
+        </div>
+        
+        <!-- 事件标题 -->
+        <div class="form-group">
+          <label for="event-title">事件标题 *</label>
+          <input 
+            type="text" 
+            id="event-title" 
+            v-model="eventForm.title" 
+            placeholder="输入事件标题"
+            required
+          >
+        </div>
+        
+        <!-- 事件类型 -->
+        <div class="form-group">
+          <label for="event-type">事件类型</label>
+          <select id="event-type" v-model="eventForm.type">
+            <option value="reminder">提醒</option>
+            <option value="meeting">会议</option>
+            <option value="task">任务</option>
+            <option value="plan">计划</option>
+          </select>
+        </div>
+        
+        <!-- 事件时间 -->
+        <div class="form-group">
+          <label for="event-time">事件时间</label>
+          <input 
+            type="text" 
+            id="event-time" 
+            v-model="eventForm.time" 
+            placeholder="如：14:00-15:00"
+          >
+        </div>
+        
+        <!-- 事件描述 -->
+        <div class="form-group">
+          <label for="event-description">事件描述</label>
+          <textarea 
+            id="event-description" 
+            v-model="eventForm.description" 
+            placeholder="输入事件描述"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn" @click="showEventDialog = false">取消</button>
+        <button class="create-btn" @click="saveEvent">保存事件</button>
+      </div>
     </div>
   </div>
 </template>
@@ -82,7 +193,15 @@ export default {
     return {
       currentDate: new Date(),
       events: [], // 这里应该从API获取实际的事件数据
-      selectedDay: null
+      selectedDay: null,
+      showEventDialog: false,
+      eventForm: {
+        title: '',
+        type: 'reminder',
+        time: '',
+        description: ''
+      },
+      dayFiles: []
     }
   },
   computed: {
@@ -161,8 +280,158 @@ export default {
     // 选择日期
     selectDay(date) {
       this.selectedDay = date
-      // 这里可以添加显示所选日期详情的逻辑
-      console.log('选择的日期:', date)
+      // 获取该日期创建的文件
+      this.fetchDayFiles(date)
+      // 不自动显示创建/查看事件对话框
+      // this.showEventDialog = true
+    },
+    
+    // 获取指定日期创建的文件
+    fetchDayFiles(date) {
+      // 发送调试信息
+      window.electronAPI.sendDebugInfo({
+        component: 'Calendar',
+        action: 'fetchDayFiles',
+        date: date.toISOString()
+      })
+      
+      // 构建日期范围（当天00:00:00到23:59:59）
+      const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      endDate.setHours(23, 59, 59, 999)
+      
+      try {
+        window.electronAPI.getCalendarEvents(startDate.toISOString(), endDate.toISOString())
+          .then(files => {
+            window.electronAPI.sendDebugInfo({
+              component: 'Calendar',
+              action: 'fetchDayFilesSuccess',
+              filesCount: files.length
+            })
+            
+            // 转换文件格式
+            this.dayFiles = files.map(file => ({
+              id: file.id,
+              title: file.title,
+              type: file.type,
+              date: new Date(file.date),
+              relatedId: file.related_id,
+              relatedType: file.related_type
+            }))
+          })
+          .catch(error => {
+            window.electronAPI.sendDebugInfo({
+              component: 'Calendar',
+              action: 'fetchDayFilesError',
+              errorMessage: error.message || 'Unknown error',
+              errorStack: error.stack || ''
+            })
+            this.dayFiles = []
+          })
+      } catch (error) {
+        window.electronAPI.sendDebugInfo({
+          component: 'Calendar',
+          action: 'fetchDayFilesException',
+          errorMessage: error.message || 'Unknown exception',
+          errorStack: error.stack || ''
+        })
+        this.dayFiles = []
+      }
+    },
+    
+    // 打开文件（跳转到编辑页面）
+    openFile(file) {
+      window.electronAPI.sendDebugInfo({
+        component: 'Calendar',
+        action: 'openFile',
+        fileId: file.id,
+        fileType: file.type
+      })
+      
+      // 先关闭事件对话框
+      this.showEventDialog = false
+      
+      // 根据文件类型跳转到对应的编辑页面
+      if (file.type === 'note') {
+        // 对于笔记，需要先获取笔记本信息，然后再跳转
+        this.fetchNoteAndNavigate(file.id)
+      } else if (file.type === 'plan') {
+        // 对于计划，跳转到计划页面并带上ID参数
+        this.$router.push({ path: '/plans', query: { planId: file.id } })
+      } else if (file.type === 'mindmap') {
+        // 对于思维导图，跳转到思维导图页面并带上ID参数
+        this.$router.push({ path: '/mindmap', query: { id: file.id } })
+      }
+    },
+    
+    // 获取笔记信息并导航
+    async fetchNoteAndNavigate(noteId) {
+      try {
+        // 先获取所有笔记，查找该笔记所属的笔记本
+        const allNotebooks = await window.electronAPI.getNotebooksWithNotes();
+        let targetNote = null;
+        let targetNotebookId = null;
+        
+        // 查找目标笔记及其所属笔记本
+        for (let i = 0; i < allNotebooks.length; i++) {
+          const notebook = allNotebooks[i];
+          for (let j = 0; j < notebook.notes.length; j++) {
+            const note = notebook.notes[j];
+            if (note.id === noteId) {
+              targetNote = note;
+              targetNotebookId = notebook.id;
+              break;
+            }
+          }
+          if (targetNote) {
+            break;
+          }
+        }
+        
+        if (targetNote && targetNotebookId) {
+          // 跳转到笔记页面，并传递笔记本ID和笔记ID
+          this.$router.push({
+            path: '/notes',
+            query: {
+              notebookId: targetNotebookId,
+              noteId: noteId
+            }
+          });
+        } else {
+          // 如果找不到，至少跳转到笔记页面
+          this.$router.push('/notes');
+        }
+      } catch (error) {
+        console.error('获取笔记信息失败:', error);
+        window.electronAPI.sendDebugInfo({
+          component: 'Calendar',
+          action: 'fetchNoteError',
+          errorMessage: error.message || 'Unknown error'
+        });
+        // 出错时也跳转到笔记页面
+        this.$router.push('/notes');
+      }
+    },
+    
+    // 获取文件类型对应的图标
+    getFileIcon(type) {
+      const iconMap = {
+        note: '📝',
+        plan: '📋',
+        mindmap: '🧠'
+      }
+      return iconMap[type] || '📄'
+    },
+    
+    // 获取文件类型的中文标签
+    getFileTypeLabel(type) {
+      const labelMap = {
+        note: '笔记',
+        plan: '计划',
+        mindmap: '思维导图'
+      }
+      return labelMap[type] || '文件'
     },
     
     // 获取指定日期的事件
@@ -173,6 +442,15 @@ export default {
       return this.events.filter(event => {
         const eventDate = new Date(event.date)
         eventDate.setHours(0, 0, 0, 0)
+        
+        // 如果是计划且有结束日期，需要检查日期范围
+        if (event.type === 'plan' && event.endDate) {
+          const endDate = new Date(event.endDate)
+          endDate.setHours(0, 0, 0, 0)
+          return targetDate.getTime() >= eventDate.getTime() && targetDate.getTime() <= endDate.getTime()
+        }
+        
+        // 其他类型的事件只需要检查创建日期
         return eventDate.getTime() === targetDate.getTime()
       })
     },
@@ -180,9 +458,11 @@ export default {
     // 获取事件类型对应的颜色
     getEventColor(type) {
       const colorMap = {
+        note: '#3498db', // 笔记 - 蓝色
+        plan: '#2ecc71', // 计划 - 绿色
+        mindmap: '#e74c3c', // 思维导图 - 红色
         task: '#3498db',
         meeting: '#e74c3c',
-        plan: '#2ecc71',
         reminder: '#f39c12'
       }
       return colorMap[type] || '#95a5a6'
@@ -190,17 +470,123 @@ export default {
     
     // 加载事件数据
     loadEvents() {
-      // 这里应该从API获取实际的事件数据
-      // 目前使用模拟数据
-      this.events = this.getMockEvents()
+      // 检查window.electronAPI是否存在
+      if (window && window.electronAPI) {
+        // 发送调试信息到主进程
+        window.electronAPI.sendDebugInfo({
+          component: 'Calendar',
+          action: 'loadEvents',
+          timestamp: new Date().toISOString(),
+          electronAPIExists: true,
+          availableMethods: Object.keys(window.electronAPI)
+        })
+        
+        // 检查getCalendarEvents方法是否存在
+        if (typeof window.electronAPI.getCalendarEvents === 'function') {
+          window.electronAPI.sendDebugInfo({
+            component: 'Calendar',
+            action: 'checkMethod',
+            methodName: 'getCalendarEvents',
+            isFunction: true,
+            methodType: typeof window.electronAPI.getCalendarEvents
+          })
+          
+          // 获取当前月份的起始和结束日期
+          const year = this.currentDate.getFullYear()
+          const month = this.currentDate.getMonth()
+          const startDate = new Date(year, month, 1).toISOString()
+          const endDate = new Date(year, month + 1, 0).toISOString()
+          
+          window.electronAPI.sendDebugInfo({
+            component: 'Calendar',
+            action: 'prepareAPI',
+            startDate: startDate,
+            endDate: endDate
+          })
+          
+          try {
+            // 调用API获取日历事件 - 现在传递参数
+            window.electronAPI.getCalendarEvents(startDate, endDate)
+              .then(events => {
+                window.electronAPI.sendDebugInfo({
+                  component: 'Calendar',
+                  action: 'apiSuccess',
+                  eventsCount: events.length
+                })
+                
+                // 转换事件格式以适应前端显示
+                this.events = events.map(event => ({
+                  id: event.id,
+                  title: event.title,
+                  type: event.type,
+                  date: new Date(event.date),
+                  endDate: event.end_date ? new Date(event.end_date) : null,
+                  relatedId: event.related_id,
+                  relatedType: event.related_type
+                }))
+              })
+              .catch(error => {
+                const errorInfo = {
+                  component: 'Calendar',
+                  action: 'apiError',
+                  errorMessage: error.message || 'Unknown error',
+                  errorStack: error.stack || ''
+                }
+                window.electronAPI.sendDebugInfo(errorInfo)
+                // 如果API调用失败，使用模拟数据
+                this.events = this.getMockEvents()
+              })
+          } catch (error) {
+            const exceptionInfo = {
+              component: 'Calendar',
+              action: 'exception',
+              errorMessage: error.message || 'Unknown exception',
+              errorStack: error.stack || ''
+            }
+            window.electronAPI.sendDebugInfo(exceptionInfo)
+            this.events = this.getMockEvents()
+          }
+        } else {
+          window.electronAPI.sendDebugInfo({
+            component: 'Calendar',
+            action: 'methodError',
+            methodName: 'getCalendarEvents',
+            isFunction: false,
+            methodType: typeof window.electronAPI.getCalendarEvents
+          })
+          this.events = this.getMockEvents()
+        }
+      } else {
+        // 如果在渲染器环境中没有electronAPI，使用模拟数据
+        this.events = this.getMockEvents()
+      }
     },
     
     // 创建新事件
     createNewEvent() {
-      // 这里可以打开创建事件的对话框
-      console.log('创建新事件')
-      // 由于没有实际的创建功能，我们可以添加一个模拟事件
-      this.addMockEvent()
+      // 如果没有选择日期，则默认选择今天
+      if (!this.selectedDay) {
+        this.selectedDay = new Date()
+      }
+      this.showEventDialog = true
+    },
+    
+    // 创建新笔记
+    createNewNote() {
+      if (!this.selectedDay) {
+        this.selectedDay = new Date()
+      }
+      // 跳转到笔记页面创建新笔记
+      this.$router.push({ path: '/notes', query: { newNote: true, date: this.selectedDay.toISOString() } })
+    },
+    
+    // 创建新计划
+    createNewPlan() {
+      if (!this.selectedDay) {
+        this.selectedDay = new Date()
+      }
+      // 跳转到计划页面创建新计划
+      this.$router.push({ path: '/plans', query: { newPlan: true, date: this.selectedDay.toISOString() } })
     },
     
     // 获取模拟事件数据
@@ -210,6 +596,34 @@ export default {
       tomorrow.setDate(today.getDate() + 1)
       const nextWeek = new Date(today)
       nextWeek.setDate(today.getDate() + 7)
+      
+      // 在加载模拟数据时也初始化dayFiles数组，用于测试
+      this.dayFiles = [
+        {
+          id: 101,
+          title: '项目需求分析',
+          type: 'note',
+          date: today,
+          relatedId: 1,
+          relatedType: 'notebook'
+        },
+        {
+          id: 102,
+          title: '产品发布计划',
+          type: 'plan',
+          date: today,
+          relatedId: null,
+          relatedType: null
+        },
+        {
+          id: 103,
+          title: '系统架构图',
+          type: 'mindmap',
+          date: today,
+          relatedId: null,
+          relatedType: null
+        }
+      ]
       
       return [
         {
@@ -258,6 +672,39 @@ export default {
         time: '16:00'
       }
       this.events.push(newEvent)
+    },
+    
+    // 保存事件
+    saveEvent() {
+      // 验证必填字段
+      if (!this.eventForm.title.trim()) {
+        alert('请输入事件标题')
+        return
+      }
+      
+      // 创建新事件对象
+      const newEvent = {
+        id: Date.now(),
+        title: this.eventForm.title,
+        type: this.eventForm.type,
+        date: new Date(this.selectedDay),
+        time: this.eventForm.time,
+        description: this.eventForm.description
+      }
+      
+      // 添加到事件数组
+      this.events.push(newEvent)
+      
+      // 关闭对话框
+      this.showEventDialog = false
+      
+      // 重置表单
+      this.eventForm = {
+        title: '',
+        type: 'reminder',
+        time: '',
+        description: ''
+      }
     }
   }
 }
@@ -475,6 +922,136 @@ export default {
   background: #2980b9;
 }
 
+/* 当日文件列表样式 */
+.day-files {
+  margin-top: 30px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.day-files-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.day-files-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.create-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.create-file-btn:hover {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+.create-file-btn.secondary {
+  background: #ecf0f1;
+  color: #2c3e50;
+}
+
+.create-file-btn.secondary:hover {
+  background: #bdc3c7;
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+.btn-text {
+  font-weight: 500;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-item:hover {
+  background: #e6f7ff;
+  transform: translateX(2px);
+}
+
+.file-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.file-content {
+  flex: 1;
+}
+
+.file-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.file-type {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.file-arrow {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.no-files {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+}
+
+.no-files-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-files-text {
+  font-size: 16px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .calendar-header {
@@ -493,5 +1070,141 @@ export default {
   .event-item {
     padding: 8px;
   }
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f8fafc;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.selected-date {
+  padding: 10px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background-color: #f8fafc;
+}
+
+.create-btn {
+  padding: 10px 20px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-btn:hover {
+  background: #2980b9;
 }
 </style>

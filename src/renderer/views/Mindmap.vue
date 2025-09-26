@@ -162,9 +162,28 @@ export default {
   methods: {
     // 加载思维导图数据
     loadMindmapData() {
-      // 这里应该从API获取实际的思维导图数据
-      // 目前使用模拟数据
-      this.loadMockData()
+      // 尝试从API获取最新的思维导图数据
+      window.electronAPI.getAllMindmaps()
+        .then(mindmaps => {
+          if (mindmaps && mindmaps.length > 0) {
+            // 加载最新的思维导图
+            const latestMindmap = mindmaps[0]
+            this.mindmapData = {
+              id: latestMindmap.id,
+              title: latestMindmap.title,
+              nodes: latestMindmap.data.nodes || [],
+              connections: latestMindmap.data.connections || []
+            }
+          } else {
+            // 如果没有思维导图数据，加载模拟数据
+            this.loadMockData()
+          }
+        })
+        .catch(error => {
+          console.error('加载思维导图数据失败:', error)
+          // 如果API调用失败，使用模拟数据
+          this.loadMockData()
+        })
     },
     
     // 加载模拟数据
@@ -523,9 +542,43 @@ export default {
     
     // 保存思维导图
     saveMindmap() {
-      console.log('保存思维导图:', this.mindmapData)
-      // 这里应该实现保存到服务器或本地的功能
-      alert('思维导图已保存')
+      // 检查是否有思维导图数据
+      if (!this.mindmapData || this.mindmapData.nodes.length === 0) {
+        alert('没有可保存的思维导图数据')
+        return
+      }
+      
+      // 准备保存数据
+      const mindmapData = {
+        title: this.mindmapData.title,
+        data: {
+          nodes: this.mindmapData.nodes,
+          connections: this.mindmapData.connections
+        }
+      }
+      
+      if (this.mindmapData.id) {
+        // 更新现有思维导图
+        window.electronAPI.updateMindmap(this.mindmapData.id, mindmapData)
+          .then(() => {
+            alert('思维导图已更新')
+          })
+          .catch(error => {
+            console.error('更新思维导图失败:', error)
+            alert('更新思维导图失败，请重试')
+          })
+      } else {
+        // 创建新思维导图
+        window.electronAPI.createMindmap(mindmapData)
+          .then(result => {
+            this.mindmapData.id = result.id
+            alert('思维导图已保存')
+          })
+          .catch(error => {
+            console.error('保存思维导图失败:', error)
+            alert('保存思维导图失败，请重试')
+          })
+      }
     },
     
     // 导出思维导图

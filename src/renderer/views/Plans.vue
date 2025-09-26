@@ -355,6 +355,13 @@ export default {
     // 加载计划列表
     async loadPlans() {
       try {
+        // 安全地获取electronAPI，处理它可能在Vue组件挂载时不可用的情况
+        if (typeof window.electronAPI === 'undefined') {
+          // 如果electronAPI不可用，等待一段时间后重试
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return this.loadPlans();
+        }
+        
         const plans = await window.electronAPI.getAllPlans();
         // 转换数据格式
         this.plans = plans.map(plan => ({
@@ -500,14 +507,14 @@ export default {
       }
       
       try {
-        // 准备计划数据
+        // 准备计划数据 - 确保所有值都是可序列化的基本类型
         const planData = {
-          title: this.newPlan.title,
-          description: this.newPlan.description,
-          typeTags: this.newPlan.tags,
-          startDate: this.newPlan.startDate || null,
-          endDate: this.newPlan.endDate || null,
-          goal: this.newPlan.goal
+          title: String(this.newPlan.title || '').trim(),
+          description: String(this.newPlan.description || '').trim(),
+          typeTags: JSON.parse(JSON.stringify(this.newPlan.tags || [])),
+          startDate: this.newPlan.startDate ? String(this.newPlan.startDate) : null,
+          endDate: this.newPlan.endDate ? String(this.newPlan.endDate) : null,
+          goal: String(this.newPlan.goal || '').trim()
         };
         
         let result;

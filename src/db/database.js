@@ -43,7 +43,7 @@ let uuidv4;
 
 class PlannerDatabase {
   constructor() {
-    const dbPath = path.join(app.getPath('userData'), 'planner.db');
+    const dbPath = path.join(app.getPath('userData'), 'planet.db');
     this.db = new Database(dbPath);
     this.init();
   }
@@ -134,6 +134,15 @@ this.db.exec('CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_i
 
     // 创建计划任务索引
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_plan_tasks_plan_id ON plan_tasks(plan_id)');
+
+    // 思维导图表
+    this.db.exec(`CREATE TABLE IF NOT EXISTS mindmaps (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
   }
 
   // 笔记本操作
@@ -462,24 +471,21 @@ this.db.exec('CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_i
     return result.changes > 0;
   }
 
-  // 获取笔记本及其所有笔记
+  // 获取笔记本及其包含的所有笔记
  getNotebooksWithNotes() {
-    const notebooks = this.getAllNotebooks();
-    const allNotes = this.getAllNotes();
-    
-    const notesByNotebook = {};
-    allNotes.forEach(note => {
-      if (!notesByNotebook[note.notebook_id]) {
-        notesByNotebook[note.notebook_id] = [];
-      }
-      notesByNotebook[note.notebook_id].push(note);
-    });
-    
-    return notebooks.map(notebook => ({
-      ...notebook,
-      notes: notesByNotebook[notebook.id] || [],
-      expanded: false
-    }));
+    try {
+      // 先获取所有笔记本
+      const notebooks = this.getAllNotebooks();
+      
+      // 为每个笔记本获取其包含的笔记
+      return notebooks.map(notebook => ({
+        ...notebook,
+        notes: this.getNotesByNotebook(notebook.id)
+      }));
+    } catch (error) {
+      console.error('获取笔记本和笔记失败:', error);
+      throw error;
+    }
   }
 
   // 计划操作
@@ -668,6 +674,122 @@ this.db.exec('CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_i
     const stmt = this.db.prepare('DELETE FROM plan_tasks WHERE id = ?');
     const result = stmt.run(id);
     return result.changes > 0;
+  }
+
+  // 思维导图操作
+  getAllMindmaps() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM mindmaps 
+      ORDER BY updated_at DESC
+    `);
+    return stmt.all();
+  }
+
+  getMindmapById(id) {
+    const stmt = this.db.prepare('SELECT * FROM mindmaps WHERE id = ?');
+    const mindmap = stmt.get(id);
+    if (mindmap) {
+      mindmap.data = JSON.parse(mindmap.data);
+    }
+    return mindmap;
+  }
+
+  createMindmap({ title, data }) {
+    // 确保uuidv4已加载
+    if (!uuidv4) {
+      try {
+        uuidv4 = require('uuid').v4;
+      } catch (error) {
+        console.error('Failed to load uuid synchronously:', error);
+        throw new Error('UUID generator not available');
+      }
+    }
+    const id = uuidv4();
+    const now = new Date().toISOString();
+    const dataStr = JSON.stringify(data);
+    
+    const stmt = this.db.prepare(`
+      INSERT INTO mindmaps (id, title, data, created_at, updated_at) 
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    const result = stmt.run(id, title, dataStr, now, now);
+    
+    return result.changes > 0 ? this.getMindmapById(id) : null;
+  }
+
+  updateMindmap(id, { title, data }) {
+    const fields = [];
+    const values = [];
+    
+    if (title !== undefined) {
+      fields.push('title = ?');
+      values.push(title);
+    }
+    
+    if (data !== undefined) {
+      fields.push('data = ?');
+      values.push(JSON.stringify(data));
+    }
+    
+    // 总是更新updated_at
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    
+    values.push(id);
+    
+    const stmt = this.db.prepare(`
+      UPDATE mindmaps SET ${fields.join(', ')} WHERE id = ?
+    `);
+    
+    const result = stmt.run(...values);
+    
+    return result.changes > 0 ? this.getMindmapById(id) : null;
+  }
+
+  deleteMindmap(id) {
+    const stmt = this.db.prepare('DELETE FROM mindmaps WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  // 获取所有内容用于日历显示
+  getAllCalendarEvents(startDate, endDate) {
+    let query = `
+      SELECT 'note' as type, id, title, created_at as date, '' as end_date, id as related_id, 'note' as related_type 
+      FROM notes
+      WHERE created_at >= ? AND created_at <= ?
+      UNION ALL
+      SELECT 'plan' as type, id, title, start_date as date, end_date, id as related_id, 'plan' as related_type 
+      FROM plans
+      WHERE (start_date >= ? AND start_date <= ?) OR (end_date >= ? AND end_date <= ?) OR (start_date <= ? AND end_date >= ?)
+      UNION ALL
+      SELECT 'mindmap' as type, id, title, created_at as date, '' as end_date, id as related_id, 'mindmap' as related_type 
+      FROM mindmaps
+      WHERE created_at >= ? AND created_at <= ?
+    `;
+    
+    const stmt = this.db.prepare(query);
+    
+    // 如果没有提供日期范围，使用默认值（过去一个月到未来一年）
+    const now = new Date();
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const defaultEndDate = new Date(now.getFullYear() + 1, now.getMonth(), 0).toISOString();
+    
+    const params = [
+      startDate || defaultStartDate,
+      endDate || defaultEndDate,
+      startDate || defaultStartDate,
+      endDate || defaultEndDate,
+      startDate || defaultStartDate,
+      endDate || defaultEndDate,
+      startDate || defaultStartDate,
+      endDate || defaultEndDate,
+      startDate || defaultStartDate,
+      endDate || defaultEndDate
+    ];
+    
+    return stmt.all(...params);
   }
 
   close() {

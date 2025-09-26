@@ -31,5 +31,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSubtasksByTaskId: (taskId) => ipcRenderer.invoke('get-subtasks-by-task-id', taskId),
   createSubtask: (subtask) => ipcRenderer.invoke('create-subtask', subtask),
   updateSubtask: (id, updates) => ipcRenderer.invoke('update-subtask', id, updates),
-  deleteSubtask: (id) => ipcRenderer.invoke('delete-subtask', id)
+  deleteSubtask: (id) => ipcRenderer.invoke('delete-subtask', id),
+  
+  // 计划相关API
+  getAllPlans: () => ipcRenderer.invoke('get-all-plans'),
+  getPlanById: (id) => ipcRenderer.invoke('get-plan-by-id', id),
+  createPlan: (planData) => ipcRenderer.invoke('create-plan', planData),
+  updatePlan: (id, updates) => ipcRenderer.invoke('update-plan', id, updates),
+  deletePlan: (id) => ipcRenderer.invoke('delete-plan', id),
+  
+  // 计划任务相关API
+  getPlanTasksByPlanId: (planId) => ipcRenderer.invoke('get-plan-tasks-by-plan-id', planId),
+  createPlanTask: (taskData) => ipcRenderer.invoke('create-plan-task', taskData),
+  updatePlanTask: (id, updates) => ipcRenderer.invoke('update-plan-task', id, updates),
+  deletePlanTask: (id) => ipcRenderer.invoke('delete-plan-task', id),
+  
+  // 日历事件API
+  getCalendarEvents: (startDate, endDate) => ipcRenderer.invoke('get-calendar-events', startDate, endDate),
+  
+  // 调试API，用于前端向主进程发送调试信息
+  sendDebugInfo: (info) => ipcRenderer.send('debug-info', info),
+  
+  // 思维导图相关API
+  getAllMindmaps: () => ipcRenderer.invoke('get-all-mindmaps'),
+  getMindmapById: (id) => ipcRenderer.invoke('get-mindmap-by-id', id),
+  createMindmap: (title, data) => ipcRenderer.invoke('create-mindmap', title, data),
+  updateMindmap: (id, title, data) => ipcRenderer.invoke('update-mindmap', id, title, data),
+  deleteMindmap: (id) => ipcRenderer.invoke('delete-mindmap', id)
 });

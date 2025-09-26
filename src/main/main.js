@@ -1,6 +1,11 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { setupDatabaseAPI } = require('./api');
+
+// 处理前端发送的调试信息
+ipcMain.on('debug-info', (event, info) => {
+  console.log('前端调试信息:', info);
+});
 const initDatabase = require('../db/schema');
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -24,8 +29,12 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5175');
     // 开发环境下打开开发者工具
     mainWindow.webContents.openDevTools();
+    console.log('开发环境：已打开开发者工具');
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // 生产环境也临时打开开发者工具以便调试
+    mainWindow.webContents.openDevTools();
+    console.log('生产环境：临时打开开发者工具进行调试');
   }
 
   // 窗口准备好后显示

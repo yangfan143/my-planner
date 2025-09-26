@@ -29,7 +29,9 @@ export default {
         tasks: '任务',
         calendar: '日历',
         mindmap: '思维导图',
-        kanban: '看板'
+        kanban: '看板',
+        todos: '待办',
+        planner: '计划'
       }
     }
   },

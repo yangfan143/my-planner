@@ -275,6 +275,63 @@ function setupDatabaseAPI() {
       throw error;
     }
   });
+
+  // 思维导图相关API
+  ipcMain.handle('get-all-mindmaps', async () => {
+    try {
+      return db.getAllMindmaps();
+    } catch (error) {
+      console.error('获取思维导图列表失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-mindmap-by-id', async (event, id) => {
+    try {
+      return db.getMindmapById(id);
+    } catch (error) {
+      console.error('获取思维导图详情失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('create-mindmap', async (event, mindmapData) => {
+    try {
+      return db.createMindmap(mindmapData);
+    } catch (error) {
+      console.error('创建思维导图失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('update-mindmap', async (event, id, updates) => {
+    try {
+      return db.updateMindmap(id, updates);
+    } catch (error) {
+      console.error('更新思维导图失败:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('delete-mindmap', async (event, id) => {
+    try {
+      return db.deleteMindmap(id);
+    } catch (error) {
+      console.error('删除思维导图失败:', error);
+      throw error;
+    }
+  });
+
+  // 日历事件相关API
+  ipcMain.handle('get-calendar-events', async (event, startDate, endDate) => {
+    try {
+      console.log('获取日历事件，参数:', { startDate, endDate });
+      return db.getAllCalendarEvents(startDate, endDate);
+    } catch (error) {
+      console.error('获取日历事件失败:', error);
+      throw error;
+    }
+  });
 }
 
 module.exports = {

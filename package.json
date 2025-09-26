@@ -1,7 +1,7 @@
 {
-  "name": "my-planner",
+  "name": "Planet",
   "version": "1.0.0",
-  "description": "个人知识管理与计划系统",
+  "description": "个人任务与计划管理系统",
   "main": "src/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
@@ -15,8 +15,8 @@
     "postinstall": "electron-rebuild"
   },
   "build": {
-    "appId": "com.example.my-knowledge-planner",
-    "productName": "知识计划",
+    "appId": "com.example.planet",
+    "productName": "Planet",
     "directories": {
       "output": "release"
     },

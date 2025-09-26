@@ -49,9 +49,9 @@ export default {
       activeNav: 'notes',
       searchQuery: '',
       navItems: [
-        { id: 'plans', name: '计划', icon: '📋', path: '/plans' },
+        { id: 'planner', name: '计划', icon: '📋', path: '/planner' },
+        { id: 'todos', name: '待办', icon: '✅', path: '/todos' },
         { id: 'notes', name: '笔记', icon: '📝', path: '/notes' },
-        { id: 'tasks', name: '任务', icon: '✓', path: '/tasks' },
         { id: 'calendar', name: '日历', icon: '📅', path: '/calendar' },
         { id: 'mindmap', name: '思维导图', icon: '🧠', path: '/mindmap' }
       ]
@@ -62,14 +62,18 @@ export default {
       this.isCollapsed = !this.isCollapsed
     },
     navigateTo(path) {
-      // 设置活动导航项
-      const activeItem = this.navItems.find(item => item.path === path)
-      if (activeItem) {
-        this.activeNav = activeItem.id
+      try {
+        // 设置活动导航项
+        const activeItem = this.navItems.find(item => item.path === path)
+        if (activeItem) {
+          this.activeNav = activeItem.id
+        }
+        
+        // 直接执行路由跳转，依赖App.vue中的全局错误处理来捕获任何DOM访问错误
+        this.$router.push(path)
+      } catch (error) {
+        console.warn('导航过程中出错，但应用已配置全局错误处理:', error)
       }
-      
-      // 跳转到指定路径
-      this.$router.push(path)
     },
     performSearch() {
       console.log('执行搜索:', this.searchQuery)

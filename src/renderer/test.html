@@ -1,10 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>Test Page</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron API 测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #333; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
 </head>
 <body>
-    <h1>Vite Server Test</h1>
-    <p>If you can see this, Vite is working!</p>
+    <div class="container">
+        <h1>Electron API 可用性测试</h1>
+        <p>此页面用于测试 window.electronAPI 是否可用。</p>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const resultElement = document.getElementById('result');
+            
+            // 检查 window.electronAPI 是否存在
+            if (typeof window.electronAPI !== 'undefined') {
+                resultElement.innerHTML = `
+                    <p class="success">✓ window.electronAPI 可用</p>
+                    <p>可用的 API 方法:</p>
+                    <pre>${JSON.stringify(Object.keys(window.electronAPI).sort(), null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">✗ window.electronAPI 不可用</p>
+                    <p>window 对象内容预览:</p>
+                    <pre>${JSON.stringify(Object.keys(window).filter(key => !key.startsWith('__') && key !== 'constructor').slice(0, 50), null, 2)}</pre>
+                `;
+            }
+        });
+    </script>
 </body>
 </html>

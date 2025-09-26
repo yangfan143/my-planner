@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
-    <h1>欢迎使用个人知识管理与计划系统</h1>
-    <p>这是一个整合笔记、任务、日历和思维导图的个人生产力工具。</p>
+    <h1>欢迎使用Planet</h1>
+    <p>这是一个简洁高效的个人任务与计划管理工具，帮助您组织工作和生活。</p>
     
     <div class="stats-grid">
       <div class="stat-card">
@@ -10,7 +10,7 @@
         <div class="stat-subtext">最近更新: 暂无</div>
       </div>
       <div class="stat-card">
-        <div class="stat-title">任务统计</div>
+        <div class="stat-title">待办统计</div>
         <div class="stat-value">0/0</div>
         <div class="stat-subtext">待完成/已完成</div>
       </div>
@@ -25,6 +25,16 @@
       <h2>最近笔记</h2>
       <p class="empty-state">暂无笔记，<a href="#" @click="createNote">创建第一篇笔记</a></p>
     </div>
+    
+    <div class="recent-section">
+      <h2>最近待办</h2>
+      <p class="empty-state">暂无待办，<a href="#" @click="createTodo">创建第一个待办</a></p>
+    </div>
+    
+    <div class="recent-section">
+      <h2>计划</h2>
+      <p class="empty-state">查看和管理您的所有计划，<a href="#" @click="goToPlanner">前往计划</a></p>
+    </div>
   </div>
 </template>
 
@@ -35,6 +45,14 @@ export default {
     createNote() {
       console.log('创建新笔记')
       // 后续实现创建笔记功能
+    },
+    createTodo() {
+      console.log('创建新待办')
+      this.$router.push('/todos')
+    },
+    goToPlanner() {
+      console.log('前往计划')
+      this.$router.push('/planner')
     }
   }
 }

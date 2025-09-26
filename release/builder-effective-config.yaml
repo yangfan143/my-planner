@@ -1,8 +1,8 @@
 directories:
   output: release
   buildResources: build
-appId: com.example.my-knowledge-planner
-productName: 知识计划
+appId: com.example.planet
+productName: Planet
 files:
   - filter:
       - dist/**/*
